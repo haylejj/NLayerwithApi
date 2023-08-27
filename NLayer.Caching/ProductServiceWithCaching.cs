@@ -7,12 +7,7 @@ using NLayer.Core.Repositories;
 using NLayer.Core.Services;
 using NLayer.Core.UnitOfWorks;
 using NLayer.Service.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NLayer.Caching
 {
@@ -31,9 +26,9 @@ namespace NLayer.Caching
             _repository=repository;
             _unitOfWork=unitOfWork;
 
-            if(!memoryCache.TryGetValue(CacheProductKey, out _))
+            if (!memoryCache.TryGetValue(CacheProductKey, out _))
             {
-                _memoryCache.Set(CacheProductKey,_repository.GetProductsWithCategoryAsync().Result); /// burada constructer da olduğumuz için asenkronu kullanamıyoruz o yüzden .result asenkrona dönüştürüyoruz:
+                _memoryCache.Set(CacheProductKey, _repository.GetProductsWithCategoryAsync().Result); /// burada constructer da olduğumuz için asenkronu kullanamıyoruz o yüzden .result asenkrona dönüştürüyoruz:
             }
         }
 
@@ -67,7 +62,7 @@ namespace NLayer.Caching
         public Task<Product> GetByIdAsync(int id)
         {
             var product = _memoryCache.Get<List<Product>>(CacheProductKey).FirstOrDefault(x => x.Id==id);
-        
+
             if (product == null)
             {
                 throw new NotFoundException($"{typeof(Product).Name}({id}) not found.");
@@ -75,18 +70,18 @@ namespace NLayer.Caching
             return Task.FromResult(product);
         }
 
-        public async Task<CustomResponseDto<List<ProductWithCategoryDto>>> GetProductsWithCategory()
+        public Task<List<ProductWithCategoryDto>> GetProductsWithCategory()
         {
             var products = _memoryCache.Get<IEnumerable<Product>>(CacheProductKey);// cache den datayı almak
-            
-            var productsDtos= _mapper.Map<List<ProductWithCategoryDto>>(products);
-            
-            return CustomResponseDto<List<ProductWithCategoryDto>>.Success(200, productsDtos);
+
+            var productsDtos = _mapper.Map<List<ProductWithCategoryDto>>(products);
+
+            return Task.FromResult(productsDtos);
         }
 
         public async Task RemoveAsync(Product entity)
         {
-             _repository.Remove(entity);
+            _repository.Remove(entity);
             await _unitOfWork.CommitAsync();
             await CacheAllProductsAsync();
         }
@@ -111,7 +106,7 @@ namespace NLayer.Caching
         }
         public async Task CacheAllProductsAsync()
         {
-            _memoryCache.Set(CacheProductKey,await _repository.GetAll().ToListAsync());
+            _memoryCache.Set(CacheProductKey, await _repository.GetAll().ToListAsync());
         }
     }
 }
